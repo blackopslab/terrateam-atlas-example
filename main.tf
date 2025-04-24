@@ -57,15 +57,15 @@ resource "aws_security_group" "rds" {
   vpc_id = data.aws_vpc.default.id
 
   ingress {
-    from_port   = 5432
-    to_port     = 5432
+    from_port   = 3306
+    to_port     = 3306
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
-    from_port   = 5432
-    to_port     = 5432
+    from_port   = 3306
+    to_port     = 3306
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -79,17 +79,36 @@ resource "aws_db_subnet_group" "terrateam" {
 
 # Create a RDS PostgreSQL instance
 resource "aws_db_instance" "terrateam" {
-  allocated_storage = 10
-  storage_type = "gp2"
-  engine = "postgres"
-  engine_version = "17.2"
-  instance_class = "db.t3.micro"
-  identifier = "terrateam"
-  username = var.db_username
-  password = var.db_password
+  allocated_storage    = 5
+  storage_type         = "gp2"
+  engine               = "mysql"
+  engine_version       = "8.0"
+  instance_class       = "db.t3.micro"
+  identifier           = "terrateam"
+  parameter_group_name = "default.mysql8.0"
+  username             = var.db_username
+  password             = var.db_password
   vpc_security_group_ids = [aws_security_group.rds.id]
   db_subnet_group_name = aws_db_subnet_group.terrateam.name
-  skip_final_snapshot = true
-  // database is publicly accessible, don't do this in prod!
-  publicly_accessible = true
+  skip_final_snapshot  = true
+  # database is publicly accessible, don't do this in prod!
+  publicly_accessible  = true
+}
+
+# Atlas provider configuration
+provider "atlas" {
+}
+
+# Load schema from HCL file
+data "atlas_schema" "terrateam" {
+  dev_url = "mysql://${var.db_username}:${var.db_password}@${aws_db_instance.terrateam.address}:3306/"
+  src = file("${path.module}/schema.hcl")
+  depends_on = [aws_db_instance.terrateam]
+}
+
+# Sync target state with HCL file
+resource "atlas_schema" "terrateam" {
+  hcl = data.atlas_schema.terrateam.hcl
+  url = "mysql://${var.db_username}:${var.db_password}@${aws_db_instance.terrateam.address}:3306/"
+  depends_on = [aws_db_instance.terrateam]
 }
