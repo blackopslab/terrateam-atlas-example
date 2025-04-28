@@ -8,6 +8,10 @@ table "users" {
     type = varchar(32)
     null = false
   }
+  column "last_login" {
+    type = timestamp
+    null = false
+  }
   column "is_admin" {
     type = boolean
     null = false
