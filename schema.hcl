@@ -8,7 +8,7 @@ table "users" {
     type = varchar(32)
     null = false
   }
-  column "last_login" {
+  column "created_at" {
     type = timestamp
     null = false
   }
